@@ -33,6 +33,8 @@ defmodule Boltex.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [
+      {:db_connection, "~> 1.0.0-rc.5"},
+
       {:ex_doc, "~> 0.13.0", only: [:dev]},
       {:mix_test_watch, "~> 0.2.6", only: [:dev, :test]},
     ]

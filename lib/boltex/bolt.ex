@@ -60,7 +60,7 @@ defmodule Boltex.Bolt do
       iex> Boltex.Bolt.init :gen_tcp, port, {"username", "password"}
       :ok
   """
-  def init(transport, port, auth \\ nil) do
+  def init(transport, port, auth \\ {}) do
     params = auth_params auth
     send_messages transport, port, [{[@user_agent, params], @sig_init}]
 
@@ -74,7 +74,7 @@ defmodule Boltex.Bolt do
     end
   end
 
-  defp auth_params(nil), do: %{}
+  defp auth_params({}), do: %{}
   defp auth_params({username, password}) do
     %{
       scheme: "basic",
@@ -140,7 +140,8 @@ defmodule Boltex.Bolt do
 
       iex> Boltex.Bolt.run_statement("MATCH (n) RETURN n")
       [
-        {:record, [sig: 1, fields: [1, "Exmaple", "Labels", %{"some_attribute" => "some_value"}]]},
+        {:success, %{"fields" => ["n"]}},
+        {:record, [sig: 1, fields: [1, "Example", "Labels", %{"some_attribute" => "some_value"}]]},
         {:success, %{"type" => "r"}}
       ]
   """
