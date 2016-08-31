@@ -2,7 +2,7 @@ defmodule Boltex.Bolt do
   alias Boltex.{Utils, PackStream}
   require Logger
 
-  @recv_timeout    1_000
+  @recv_timeout    10_000
   @max_chunk_size  65_535
 
   @user_agent      "Boltex/1.0"
@@ -179,15 +179,24 @@ defmodule Boltex.Bolt do
   * `:failure`
   """
   def receive_data(transport, port, previous \\ []) do
-    case do_receive_data(transport, port) |> unpack do
-      {:record, _} = data ->
-        receive_data transport, port, [data | previous]
+    with {:ok, data} <- do_receive_data(transport, port)
+    do
+      case unpack(data) do
+        {:record, _} = data ->
+          receive_data transport, port, [data | previous]
 
-      {status, _} = data when status in @summary and previous == [] ->
-        data
+        {status, _} = data when status in @summary and previous == [] ->
+          data
 
-      {status, _} = data when status in @summary ->
-        Enum.reverse [data | previous]
+        {status, _} = data when status in @summary ->
+          Enum.reverse [data | previous]
+
+        other ->
+          {:error, "Error decoding data: #{inspect other}"}
+      end
+    else
+      other ->
+        {:error, "Error receiving data: #{inspect other}"}
     end
   end
 
@@ -195,23 +204,27 @@ defmodule Boltex.Bolt do
     with {:ok, <<chunk_size :: 16>>} <- transport.recv(port, 2, @recv_timeout),
     do:  do_receive_data(transport, port, chunk_size)
   end
-  defp do_receive_data(transport, port, chunk_size) do
-    with {:ok, data} <- transport.recv(port, chunk_size, @recv_timeout)
+  defp do_receive_data(transport, port, chunk_size, old_data \\ {:ok, <<>>})
+  defp do_receive_data(transport, port, chunk_size, {:ok, old_data}) do
+    IO.puts "do receiev"
+    with {:ok, data}   <- transport.recv(port, chunk_size, @recv_timeout),
+         {:ok, marker} <- transport.recv(port, 2, @recv_timeout)
     do
-      case transport.recv(port, 2, @recv_timeout) do
-        {:ok, @zero_chunk} ->
-          data
-        {:ok, <<chunk_size :: 16>>} ->
-          data <> do_receive_data(transport, port, chunk_size)
+      case marker do
+        @zero_chunk ->
+          {:ok, old_data <> data}
+
+        <<chunk_size :: 16>> ->
+          do_receive_data(transport, port, chunk_size, {:ok, data})
       end
     else
       {:error, :timeout} ->
         {:error, :no_more_data_received}
       other ->
-        IO.inspect Utils.hex_encode other
-        raise "receive failed"
+        {:error, "Error receiving data: #{inspect other}"}
     end
   end
+  defp do_receive_data(_, _, _, {:error, _} = error), do: error
 
   @doc """
   Unpacks (or in other words parses) a message.
