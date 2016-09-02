@@ -8,4 +8,9 @@ defmodule Boltex.ConnectionTest do
     assert Connection.parse_ip_or_hostname("192.168.0.1") == {192, 168, 0, 1}
     assert Connection.parse_ip_or_hostname({192, 168, 99, 100}) == {192, 168, 99, 100}
   end
+
+  @tag :integration
+  test "executes a query successfully" do
+    assert {:ok, pid} = DBConnection.start_link Boltex.Connection, [host: "localhost", port: 7687, auth: {}]
+  end
 end

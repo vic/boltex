@@ -1,5 +1,5 @@
 defmodule Boltex.Bolt do
-  alias Boltex.{Utils, PackStream}
+  alias Boltex.{Utils, PackStream, Error}
   require Logger
 
   @recv_timeout    10_000
@@ -40,9 +40,11 @@ defmodule Boltex.Bolt do
       {:ok, << 1 :: 32 >>} ->
         :ok
 
-      response ->
-        Logger.error "Handshake failed. Received: #{Utils.hex_encode response})"
-        {:error, :handshake_failed}
+      {:ok, other} ->
+        {:error, Error.exception(other, port, :handshake)}
+
+      other ->
+        {:error, Error.exception(other, port, :handshake)}
     end
   end
 
@@ -69,8 +71,7 @@ defmodule Boltex.Bolt do
         :ok
 
       response ->
-        Logger.error "Init failed. Received: #{Utils.hex_encode response})"
-        {:error, :init_failed}
+        {:error, Error.exception(response, port, :init)}
     end
   end
 
@@ -151,8 +152,16 @@ defmodule Boltex.Bolt do
       {[nil], @sig_pull_all}
     ]
 
-    with {:success, %{}} = data <- receive_data(transport, port),
-    do:  [data | receive_data(transport, port) |> List.wrap]
+    case receive_data(transport, port) do
+      {:success, %{}} = data ->
+        [data | (transport |> receive_data(port) |> List.wrap)]
+
+      {:failure, map} ->
+        Boltex.Error.exception map, port, :run_statement
+
+      error ->
+        error
+    end
   end
 
   @doc """
@@ -192,7 +201,7 @@ defmodule Boltex.Bolt do
           Enum.reverse [data | previous]
 
         other ->
-          {:error, "Error decoding data: #{inspect other}"}
+          {:error, Error.exception(other, port, :receive_data)}
       end
     else
       other ->

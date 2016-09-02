@@ -28,6 +28,6 @@ defmodule Boltex do
   def log(msg) do
     IO.puts "Pool time: #{msg.pool_time / 1_000}"
     IO.puts "Connection time: #{msg.connection_time / 1_000}"
-    IO.puts "Decode time: #{msg.decode_time / 1_000}"
+    IO.puts "Decode time: #{(msg.decode_time || 0) / 1_000}"
   end
 end

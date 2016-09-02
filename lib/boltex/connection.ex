@@ -8,20 +8,7 @@ defmodule Boltex.Connection do
 
   use DBConnection
 
-  alias Boltex.{Bolt, Connection, Query}
-
-  defmodule Error do
-    defexception [:function, :reason, :message]
-
-    def exception({function, reason}) do
-      message = "#{function} error: #{format_error(reason)}"
-      %Error{function: function, reason: reason, message: message}
-    end
-
-    defp format_error(:closed), do: "closed"
-    defp format_error(:timeout), do: "timeout"
-    defp format_error(reason), do: :inet.format_error(reason)
-  end
+  alias Boltex.{Bolt, Connection, Query, Error}
 
   @doc "Callback for DBConnection.connect/1"
   def connect(opts) do
@@ -42,8 +29,8 @@ defmodule Boltex.Connection do
     do
       {:ok, port}
     else
-      {:error, reason} ->
-        {:error, Connection.Error.exception({:connect, reason})}
+      error ->
+        {:error, Error.exception(error, nil, :connect)}
     end
   end
 
@@ -69,6 +56,9 @@ defmodule Boltex.Connection do
       [{:success, _} | _] = data ->
         {:ok, data, port}
 
+      %Error{type: :cypher_error} = error ->
+        {:error, error, port}
+
       other ->
         {:disconnect, other, port}
     end
@@ -79,12 +69,18 @@ defmodule Boltex.Connection do
   end
 
   def handle_info({:tcp_closed, sock}, {sock, _} = state) do
-    {:disconnect, Connection.Error.exception({:recv, :closed}), state}
+    {:disconnect, Error.exception({:recv, :closed}, state, nil), state}
   end
   def handle_info({:tcp_error, sock, reason}, {sock, _} = state) do
-    {:disconnect, Connection.Error.exception({:recv, reason}), state}
+    {:disconnect, Error.exception({:recv, reason}, state, nil), state}
   end
   def handle_info(_, state), do: {:ok, state}
+
+  def disconnect(_err, sock) do
+    :gen_tcp.close sock
+
+    :ok
+  end
 
   def parse_ip_or_hostname(host) when is_binary(host) do
     host = String.to_charlist host
