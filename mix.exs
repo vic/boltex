@@ -35,7 +35,9 @@ defmodule Boltex.Mixfile do
     [
       {:db_connection, "~> 1.0.0-rc.5"},
 
-      {:ex_doc, "~> 0.13.0", only: [:dev]},
+      {:credo, "~> 0.3", only: [:dev, :test]},
+      {:ex_doc, "~> 0.13.0", only: [:docs]},
+      {:inch_ex, "~> 0.5.2", only: [:docs]},
       {:mix_test_watch, "~> 0.2.6", only: [:dev, :test]},
     ]
   end

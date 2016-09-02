@@ -90,7 +90,8 @@ defmodule Boltex.Bolt do
   Messages have to be in the form of {[messages], signature}.
   """
   def send_messages(transport, port, messages) do
-    Enum.map(messages, &generate_binary_message/1)
+    messages
+    |> Enum.map(&generate_binary_message/1)
     |> generate_chunks
     |> Enum.each(&(transport.send(port, &1)))
   end
@@ -177,8 +178,8 @@ defmodule Boltex.Bolt do
   return a list of the former.
 
   The same goes for the messages: If there was a single data point in a message
-  said data point will be returned by itself. If there were multiple data points,
-  the list will be returned.
+  said data point will be returned by itself. If there were multiple data
+  points, the list will be returned.
 
   The signature is represented as one of the following:
 
@@ -227,10 +228,8 @@ defmodule Boltex.Bolt do
           do_receive_data(transport, port, chunk_size, {:ok, data})
       end
     else
-      {:error, :timeout} ->
-        {:error, :no_more_data_received}
       other ->
-        {:error, "Error receiving data: #{inspect other}"}
+        Error.exception other, port, :recv
     end
   end
   defp do_receive_data(_, _, _, {:error, _} = error), do: error
