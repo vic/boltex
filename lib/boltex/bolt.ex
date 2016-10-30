@@ -160,14 +160,9 @@ defmodule Boltex.Bolt do
       {[nil], @sig_ack_failure}
     ]
 
-    case receive_data(transport, port) do
-      {:success, %{}} ->
-        :ok
-
-      response ->
-        Logger.error "AckFailure failed. Received: #{Utils.hex_encode response})"
-        {:error, :ack_failure_failed}
-    end
+    with {:ignored, []} <- receive_data(transport, port),
+         {:success, %{}} <- receive_data(transport, port),
+      do: :ok
   end
 
   @doc """

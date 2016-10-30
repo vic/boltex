@@ -28,11 +28,11 @@ defmodule Boltex.Server do
     {:reply, :ok, {:disconnected, conn_opts}}
   end
 
-  def handle_call({:connect, more_opts}, _from, st = {:open, _, _}) do
+  def handle_call({:connect, _}, _from, st = {:open, _, _}) do
     {:reply, :ok, st}
   end
 
-  def handle_call({:connect, more_opts}, from, {:disconnected, options}) do
+  def handle_call({:connect, more_opts}, _from, {:disconnected, options}) do
     conn_opts = Keyword.merge(options, more_opts) 
     {:reply, :ok, connect(conn_opts)}
   end
@@ -47,6 +47,7 @@ defmodule Boltex.Server do
       [{:success, _} | _] ->
         {:reply, result, open}
       {:failure, _} ->
+        :ok = Bolt.ack_failure(@transport, port)
         {:reply, result, open}
     end
   end

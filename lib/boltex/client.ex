@@ -31,7 +31,7 @@ defmodule Boltex.Client do
 
   def perform(server, request), do: GenServer.call(server, request)
 
-  defp statement_result(failure: failure) do
+  defp statement_result({:failure, failure}) do
     {:error, failure}
   end
 

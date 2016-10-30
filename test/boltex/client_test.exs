@@ -21,4 +21,15 @@ defmodule Boltex.ClientTest do
     assert %{"name" => "joe", "age" => 22} == node.properties
   end
 
+  test "emptying the whole graph" do
+    cypher = "MATCH (n) OPTIONAL MATCH (n)-[r]-() DELETE n,r"
+    assert :ok = MyClient.run(cypher)
+  end
+
+  test "returns error on invalid cypher statement" do
+    assert {:error, _} = MyClient.run("INVALID")
+    cypher = "MATCH (n) OPTIONAL MATCH (n)-[r]-() DELETE n,r"
+    assert :ok = MyClient.run(cypher)
+  end
+
 end
