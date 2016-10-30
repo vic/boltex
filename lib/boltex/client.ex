@@ -14,7 +14,7 @@ defmodule Boltex.Client do
   end
 
   @callback connect() :: :ok | any
-  @callback connect(options) :: :ok | any
+  @callback connect(Keyword.t) :: :ok | any
   @callback run(String.t) :: any
 
 end
