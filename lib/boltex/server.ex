@@ -15,28 +15,39 @@ defmodule Boltex.Server do
     GenServer.start_link(__MODULE__, options, name: name)
   end
 
-  def init(options) do
-    {:ok, {:disconnected, options}}
+  def init(conn_opts) do
+    {:ok, {:disconnected, conn_opts}}
   end
 
-  def handle_call({:connect, more_opts}, _from, {:disconnected, options}) do
-    {:ok, port} = Keyword.merge(options, more_opts) |> connect
-    {:reply, :ok, {:ready, port}}
+  def handle_call(:disconnect, _from, st = {:disconnected, _}) do
+    {:reply, :ok, st}
   end
 
-  def handle_call(call, from, {:disconnected, options}) do
-    {:ok, port} = connect(options)
-    handle_call(call, from, {:ready, port})
+  def handle_call(:disconnect, _from, {:open, port, conn_opts}) do
+    :ok = @transport.close(port)
+    {:reply, :ok, {:disconnected, conn_opts}}
   end
 
-  def handle_call({:run, {statement, params}}, _from, {:ready, port}) when is_port(port) do
+  def handle_call({:connect, more_opts}, _from, st = {:open, _, _}) do
+    {:reply, :ok, st}
+  end
+
+  def handle_call({:connect, more_opts}, from, {:disconnected, options}) do
+    conn_opts = Keyword.merge(options, more_opts) 
+    {:reply, :ok, connect(conn_opts)}
+  end
+
+  def handle_call(call, from, {:disconnected, conn_opts}) do
+    handle_call(call, from, connect(conn_opts))
+  end
+
+  def handle_call({:run, {statement, params}}, _from, open = {:open, port, _}) do
     result = Bolt.run_statement(@transport, port, statement, params)
     case result do
       [{:success, _} | _] ->
-        {:reply, result, {:ready, port}}
+        {:reply, result, open}
       {:failure, _} ->
-        :ok = Bolt.ack_failure(@transport, port)
-        {:reply, result, {:ready, port}}
+        {:reply, result, open}
     end
   end
 
@@ -45,13 +56,13 @@ defmodule Boltex.Server do
   defp string_to_charlist(s) when is_binary(s), do: String.to_charlist(s)
   defp string_to_charlist(s), do: s
 
-  defp connect(options) do
+  defp connect(conn_opts) do
     %{host: host, port: port, user: user, password: password} =
-      Keyword.merge(@default_options, options) |> Enum.into(%{})
+      Keyword.merge(@default_options, conn_opts) |> Enum.into(%{})
     {:ok, port} = @transport.connect string_to_charlist(host), port, @transport_init
     :ok = Bolt.handshake @transport, port
     :ok = Bolt.init @transport, port, {user, password}
-    {:ok, port}
+    {:open, port, conn_opts}
   end
 
 end
