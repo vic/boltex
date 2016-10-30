@@ -41,8 +41,7 @@ defmodule Boltex.Server do
   defp connect(options) do
     %{host: host, port: port, user: user, password: password} =
       Keyword.merge(@default_options, options) |> Enum.into(%{})
-    [host, user, password] = [host, user, password] |> Enum.map(&string_to_charlist/1)
-    {:ok, pid} = :gen_tcp.connect host, port, @connect_mode
+    {:ok, pid} = :gen_tcp.connect string_to_charlist(host), port, @connect_mode
     :ok = Bolt.handshake :gen_tcp, pid
     :ok = Bolt.init :gen_tcp, pid, {user, password}
     {:ok, pid}
