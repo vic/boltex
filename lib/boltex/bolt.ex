@@ -135,7 +135,7 @@ defmodule Boltex.Bolt do
   records and a summary.
 
   Records are represented using PackStream's record data type. Their Elixir
-  representation is a Keyword with the indexse `:sig` and `:fields`.
+  representation is a Keyword with the keys `:sig` and `:fields`.
 
   ## Examples
 
