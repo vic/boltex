@@ -5,10 +5,10 @@ defmodule Boltex.Client do
       @behaviour Boltex.Client
 
       def connect(options \\ unquote(options)),
-        do: Boltex.Client.call(__MODULE__, {:connect, options})
+        do: Boltex.Client.perform(__MODULE__, {:connect, options})
 
       def run(statement, params \\ %{}),
-        do: Boltex.Client.call(__MODULE__, {:run, {statement, params}})
+        do: Boltex.Client.perform(__MODULE__, {:run, {statement, params}})
 
     end
   end
@@ -20,18 +20,12 @@ defmodule Boltex.Client do
   @callback run(String.t, Map.t) :: any
 
   @doc false
-  def call(server, {:run, statement}) do
+  def perform(server, {:run, statement}) do
     GenServer.call(server, {:run, statement})
     |> statement_result
-    |> case do
-         success = {:ok, _} -> success
-         error ->
-           GenServer.cast(server, :reset)
-           error
-       end
   end
 
-  def call(server, request), do: GenServer.call(server, request)
+  def perform(server, request), do: GenServer.call(server, request)
 
   defp statement_result(failure: failure) do
     {:error, failure}

@@ -155,9 +155,9 @@ defmodule Boltex.Bolt do
     do:  [data | transport |> receive_data(port) |> List.wrap]
   end
 
-  def reset(transport, port) do
+  def ack_failure(transport, port) do
     send_messages transport, port, [
-      {[nil], @sig_reset}
+      {[nil], @sig_ack_failure}
     ]
 
     case receive_data(transport, port) do
@@ -165,8 +165,8 @@ defmodule Boltex.Bolt do
         :ok
 
       response ->
-        Logger.error "Reset failed. Received: #{Utils.hex_encode response})"
-        {:error, :reset_failed}
+        Logger.error "AckFailure failed. Received: #{Utils.hex_encode response})"
+        {:error, :ack_failure_failed}
     end
   end
 

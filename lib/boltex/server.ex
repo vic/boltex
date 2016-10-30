@@ -21,22 +21,23 @@ defmodule Boltex.Server do
 
   def handle_call({:connect, more_opts}, _from, {:disconnected, options}) do
     {:ok, port} = Keyword.merge(options, more_opts) |> connect
-    {:reply, :ok, port}
+    {:reply, :ok, {:ready, port}}
   end
 
   def handle_call(call, from, {:disconnected, options}) do
     {:ok, port} = connect(options)
-    handle_call(call, from, port)
+    handle_call(call, from, {:ready, port})
   end
 
-  def handle_call({:run, {statement, params}}, _from, port) when is_port(port) do
+  def handle_call({:run, {statement, params}}, _from, {:ready, port}) when is_port(port) do
     result = Bolt.run_statement(@transport, port, statement, params)
-    {:reply, result, port}
-  end
-
-  def handle_cast(:reset, port) when is_port(port) do
-    Bolt.reset(@transport, port)
-    {:noreply, port}
+    case result do
+      [{:success, _} | _] ->
+        {:reply, result, {:ready, port}}
+      {:failure, _} ->
+        :ok = Bolt.ack_failure(@transport, port)
+        {:reply, result, {:ready, port}}
+    end
   end
 
   # Privates
