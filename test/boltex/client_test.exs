@@ -32,4 +32,15 @@ defmodule Boltex.ClientTest do
     assert :ok = MyClient.run(cypher)
   end
 
+  test "returning the id of a just created node" do
+    cypher = "CREATE (x) RETURN x, id(x) as id"
+    assert {:ok, %{"id" => id, "x" => node}} = MyClient.run(cypher)
+    assert id == node.id
+  end
+
+  test "returning a value without alias" do
+    cypher = "RETURN 22"
+    assert {:ok, %{"22" => 22}} = MyClient.run(cypher)
+  end
+
 end
