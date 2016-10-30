@@ -3,8 +3,9 @@ defmodule Boltex.Server do
   use GenServer
   alias Boltex.Bolt
 
+  @transport :gen_tcp
+  @transport_init [active: false, mode: :binary, packet: :raw]
   @default_options [host: "localhost", port: 7687, user: "neo4j", password: "neo4j"]
-  @connect_mode [active: false, mode: :binary, packet: :raw]
 
   # OTP
 
@@ -28,9 +29,14 @@ defmodule Boltex.Server do
     handle_call(call, from, port)
   end
 
-  def handle_call({:run, statement}, _from, port) when is_port(port) do
-    result = Bolt.run_statement(:gen_tcp, port, statement)
+  def handle_call({:run, {statement, params}}, _from, port) when is_port(port) do
+    result = Bolt.run_statement(@transport, port, statement, params)
     {:reply, result, port}
+  end
+
+  def handle_cast(:reset, port) when is_port(port) do
+    Bolt.reset(@transport, port)
+    {:noreply, port}
   end
 
   # Privates
@@ -41,9 +47,9 @@ defmodule Boltex.Server do
   defp connect(options) do
     %{host: host, port: port, user: user, password: password} =
       Keyword.merge(@default_options, options) |> Enum.into(%{})
-    {:ok, port} = :gen_tcp.connect string_to_charlist(host), port, @connect_mode
-    :ok = Bolt.handshake :gen_tcp, port
-    :ok = Bolt.init :gen_tcp, port, {user, password}
+    {:ok, port} = @transport.connect string_to_charlist(host), port, @transport_init
+    :ok = Bolt.handshake @transport, port
+    :ok = Bolt.init @transport, port, {user, password}
     {:ok, port}
   end
 

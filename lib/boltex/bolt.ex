@@ -50,7 +50,7 @@ defmodule Boltex.Bolt do
   Initialises the connection.
 
   Expects a transport module (i.e. `gen_tcp`) and a `Port`. Accepts
-  authorisation params in the form of {username, password}.
+  authorization params in the form of {username, password}.
 
   ## Examples
 
@@ -141,7 +141,7 @@ defmodule Boltex.Bolt do
 
       iex> Boltex.Bolt.run_statement("MATCH (n) RETURN n")
       [
-        {:record, [sig: 1, fields: [1, "Exmaple", "Labels", %{"some_attribute" => "some_value"}]]},
+        {:record, [sig: 1, fields: [1, "Example", "Labels", %{"some_attribute" => "some_value"}]]},
         {:success, %{"type" => "r"}}
       ]
   """
@@ -153,6 +153,21 @@ defmodule Boltex.Bolt do
 
     with {:success, %{}} = data <- receive_data(transport, port),
     do:  [data | transport |> receive_data(port) |> List.wrap]
+  end
+
+  def reset(transport, port) do
+    send_messages transport, port, [
+      {[nil], @sig_reset}
+    ]
+
+    case receive_data(transport, port) do
+      {:success, %{}} ->
+        :ok
+
+      response ->
+        Logger.error "Reset failed. Received: #{Utils.hex_encode response})"
+        {:error, :reset_failed}
+    end
   end
 
   @doc """
