@@ -3,7 +3,7 @@ defmodule Boltex.Server do
   use GenServer
   alias Boltex.Bolt
 
-  @default_options [host: 'localhost', port: 7687, user: 'neo4j', password: 'neo4j']
+  @default_options [host: "localhost", port: 7687, user: "neo4j", password: "neo4j"]
   @connect_mode [active: false, mode: :binary, packet: :raw]
 
   # OTP
