@@ -19,18 +19,18 @@ defmodule Boltex.Server do
   end
 
   def handle_call({:connect, more_opts}, _from, {:disconnected, options}) do
-    {:ok, pid} = Keyword.merge(options, more_opts) |> connect
-    {:reply, :ok, pid}
+    {:ok, port} = Keyword.merge(options, more_opts) |> connect
+    {:reply, :ok, port}
   end
 
   def handle_call(call, from, {:disconnected, options}) do
-    {:ok, pid} = connect(options)
-    handle_call(call, from, pid)
+    {:ok, port} = connect(options)
+    handle_call(call, from, port)
   end
 
-  def handle_call({:run, statement}, _from, pid) when is_pid(pid) do
-    result = Bolt.run_statement(:gen_tcp, pid, statement)
-    {:reply, result, pid}
+  def handle_call({:run, statement}, _from, port) when is_port(port) do
+    result = Bolt.run_statement(:gen_tcp, port, statement)
+    {:reply, result, port}
   end
 
   # Privates
@@ -41,10 +41,10 @@ defmodule Boltex.Server do
   defp connect(options) do
     %{host: host, port: port, user: user, password: password} =
       Keyword.merge(@default_options, options) |> Enum.into(%{})
-    {:ok, pid} = :gen_tcp.connect string_to_charlist(host), port, @connect_mode
-    :ok = Bolt.handshake :gen_tcp, pid
-    :ok = Bolt.init :gen_tcp, pid, {user, password}
-    {:ok, pid}
+    {:ok, port} = :gen_tcp.connect string_to_charlist(host), port, @connect_mode
+    :ok = Bolt.handshake :gen_tcp, port
+    :ok = Bolt.init :gen_tcp, port, {user, password}
+    {:ok, port}
   end
 
 end
